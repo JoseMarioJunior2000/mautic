@@ -35,7 +35,7 @@ services:
     volumes: 
       - mautic_db_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u$$MAUTIC_DB_USER", "-p$$MAUTIC_DB_PASSWORD"]      start_period: 5s
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u$${MARIADB_USER}", "-p$${MARIADB_PASSWORD}"]
       start_period: 10s
       interval: 10s
       timeout: 5s
