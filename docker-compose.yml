@@ -86,7 +86,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - default
+      - custom_bridge
 
   mautic_cron:
     image: mautic/mautic:6-fpm
@@ -128,7 +128,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - default
+      - custom_bridge
 
 volumes:
   mysql-data:
