@@ -7,32 +7,39 @@ x-mautic-volumes: &mautic-volumes
   - mautic-docroot:/var/www/html/docroot:z
 
 x-base: &base
-    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-    MYSQL_DATABASE: ${MAUTIC_DB_DATABASE}
-    MYSQL_USER: ${MAUTIC_DB_USER}
-    MYSQL_PASSWORD: ${MAUTIC_DB_PASSWORD}
     MAUTIC_DB_PORT: ${MAUTIC_DB_PORT}
     PHP_INI_VALUE_DATE_TIMEZONE: ${PHP_INI_VALUE_DATE_TIMEZONE}
     MAUTIC_RUN_CRON_JOBS: true
+    MARIADB_ROOT_PASSWORD: ${MAUTIC_DB_ROOT_PASSWORD}
+    MARIADB_DATABASE: ${MAUTIC_DB_DATABASE}
+    MARIADB_USER: ${MAUTIC_DB_USER}
+    MARIADB_PASSWORD: ${MAUTIC_DB_PASSWORD}
 
 services:
   db:
-    image: mysql:8.0
+    image: alpine/mariadb:11.4.9
     restart: unless-stopped
     container_name: mautic-db
+    command: 
+      - mysqld
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --max-allowed-packet=128M
+      - --innodb-log-file-size=256M
+      - --innodb-buffer-pool-size=512M
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MAUTIC_DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MAUTIC_DB_DATABASE}
+      MARIADB_USER: ${MAUTIC_DB_USER}
+      MARIADB_PASSWORD: ${MAUTIC_DB_PASSWORD}
     volumes: 
-      - mysql-data:/var/lib/mysql
+      - mautic_db_data:/var/lib/mysql
     healthcheck:
-      test: mysqladmin --user=$$MYSQL_USER --password=$$MYSQL_PASSWORD ping
-      start_period: 5s
-      interval: 5s
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u$$MARIADB_USER", "-p$$MARIADB_PASSWORD"]      start_period: 5s
+      start_period: 10s
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
     networks:
       - custom_bridge
 
