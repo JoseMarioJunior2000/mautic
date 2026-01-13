@@ -7,7 +7,6 @@ x-mautic-volumes: &mautic-volumes
   - mautic-docroot:/var/www/html/docroot:z
 
 x-base: &base
-    MAUTIC_DB_PORT: ${MAUTIC_DB_PORT}
     PHP_INI_VALUE_DATE_TIMEZONE: ${PHP_INI_VALUE_DATE_TIMEZONE}
     MAUTIC_RUN_CRON_JOBS: true
     MARIADB_ROOT_PASSWORD: ${MAUTIC_DB_ROOT_PASSWORD}
@@ -33,9 +32,9 @@ services:
       MARIADB_USER: ${MAUTIC_DB_USER}
       MARIADB_PASSWORD: ${MAUTIC_DB_PASSWORD}
     volumes: 
-      - mautic_db_data:/var/lib/mysql
+      - mariadb-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u$${MARIADB_USER}", "-p$${MARIADB_PASSWORD}"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u$${MAUTIC_DB_USER}", "-p$${MAUTIC_DB_PASSWORD}"]
       start_period: 10s
       interval: 10s
       timeout: 5s
@@ -131,7 +130,7 @@ services:
       - custom_bridge
 
 volumes:
-  mysql-data:
+  mariadb-data:
   mautic-docroot:
 
 networks:
