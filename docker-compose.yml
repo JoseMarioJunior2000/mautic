@@ -34,11 +34,16 @@ services:
     volumes: 
       - mariadb-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      start_period: 10s
+      test: >
+        CMD-SHELL
+        mysqladmin ping
+        -h 127.0.0.1
+        -u root
+        -p"$MARIADB_ROOT_PASSWORD"
+      start_period: 20s
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
     networks:
       - custom_bridge
 
@@ -66,8 +71,6 @@ services:
     image: mautic/mautic:6-fpm
     container_name: mautic-web
     restart: unless-stopped
-    links:
-      - db:mysql
     volumes: *mautic-volumes
 
     environment:
@@ -91,8 +94,6 @@ services:
     image: mautic/mautic:6-fpm
     container_name: mautic-cron
     restart: unless-stopped
-    links:
-      - db:mysql
     volumes: *mautic-volumes
     environment:
       <<: *base
@@ -112,8 +113,6 @@ services:
     image: mautic/mautic:6-fpm
     container_name: mautic-worker
     restart: unless-stopped
-    links:
-      - db:mysql
     volumes: *mautic-volumes
     environment:
       <<: *base
