@@ -37,6 +37,8 @@ services:
       - custom_bridge
 
   nginx:
+    pull_policy: never
+    image: mauticnginx
     build:
       context: ./nginx
       dockerfile: Dockerfile
