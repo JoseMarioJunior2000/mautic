@@ -7,19 +7,19 @@ x-mautic-volumes: &mautic-volumes
   - mautic-docroot:/var/www/html/docroot:z
 
 x-base: &base
-    PHP_INI_VALUE_DATE_TIMEZONE: ${PHP_INI_VALUE_DATE_TIMEZONE}
-    MAUTIC_RUN_CRON_JOBS: true
-    MARIADB_ROOT_PASSWORD: ${MAUTIC_DB_ROOT_PASSWORD}
-    MARIADB_DATABASE: ${MAUTIC_DB_DATABASE}
-    MARIADB_USER: ${MAUTIC_DB_USER}
-    MARIADB_PASSWORD: ${MAUTIC_DB_PASSWORD}
+  PHP_INI_VALUE_DATE_TIMEZONE: ${PHP_INI_VALUE_DATE_TIMEZONE}
+  MAUTIC_RUN_CRON_JOBS: true
+  MARIADB_ROOT_PASSWORD: ${MAUTIC_DB_ROOT_PASSWORD}
+  MARIADB_DATABASE: ${MAUTIC_DB_DATABASE}
+  MARIADB_USER: ${MAUTIC_DB_USER}
+  MARIADB_PASSWORD: ${MAUTIC_DB_PASSWORD}
 
 services:
   db:
     image: alpine/mariadb:11.4.9
-    restart: unless-stopped
     container_name: mautic-db
-    command: 
+    restart: unless-stopped
+    command:
       - mysqld
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -73,15 +73,14 @@ services:
       DOCKER_MAUTIC_ROLE: mautic_web
       DOCKER_MAUTIC_LOAD_TEST_DATA: ${DOCKER_MAUTIC_LOAD_TEST_DATA}
       DOCKER_MAUTIC_RUN_MIGRATIONS: "true"
+    depends_on:
+      - db
     healthcheck:
-      test: cgi-fcgi -bind -connect 127.0.0.1:9000
-      start_period: 5s
+      test: ["CMD", "cgi-fcgi", "-bind", "-connect", "127.0.0.1:9000"]
+      start_period: 10s
       interval: 5s
       timeout: 5s
       retries: 100
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - custom_bridge
 
@@ -97,10 +96,8 @@ services:
       DOCKER_MAUTIC_WORKERS_CONSUME_HIT: 2
       DOCKER_MAUTIC_WORKERS_CONSUME_FAILED: 2
     depends_on:
-      mautic_web:
-        condition: service_healthy
-      db:
-        condition: service_healthy
+      - db
+      - mautic_web
     networks:
       - custom_bridge
 
@@ -116,10 +113,28 @@ services:
       DOCKER_MAUTIC_WORKERS_CONSUME_HIT: 2
       DOCKER_MAUTIC_WORKERS_CONSUME_FAILED: 2
     depends_on:
-      mautic_web:
-        condition: service_healthy
-      db:
-        condition: service_healthy
+      - db
+      - mautic_web
+    networks:
+      - custom_bridge
+
+  nginx:
+    image: mauticnginx
+    container_name: mautic-nginx
+    restart: unless-stopped
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - mautic-docroot:/var/www/html/docroot:z
+      - ./mautic/media/files:/var/www/html/docroot/media/files:z
+      - ./mautic/media/images:/var/www/html/docroot/media/images:z
+    depends_on:
+      - mautic_web
     networks:
       - custom_bridge
 
