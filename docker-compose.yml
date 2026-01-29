@@ -1,3 +1,5 @@
+version: '3.8'
+
 x-mautic-volumes: &mautic-volumes
   - ./mautic/config:/var/www/html/config:z
   - ./mautic/logs:/var/www/html/var/logs:z
@@ -7,12 +9,12 @@ x-mautic-volumes: &mautic-volumes
   - mautic-docroot:/var/www/html/docroot:z
 
 x-base: &base
+  MAUTIC_DB_HOST: db
+  MAUTIC_DB_USER: ${MAUTIC_DB_USER}
+  MAUTIC_DB_PASSWORD: ${MAUTIC_DB_PASSWORD}
+  MAUTIC_DB_NAME: ${MAUTIC_DB_DATABASE}
   PHP_INI_VALUE_DATE_TIMEZONE: ${PHP_INI_VALUE_DATE_TIMEZONE}
-  MAUTIC_RUN_CRON_JOBS: true
-  MARIADB_ROOT_PASSWORD: ${MAUTIC_DB_ROOT_PASSWORD}
-  MARIADB_DATABASE: ${MAUTIC_DB_DATABASE}
-  MARIADB_USER: ${MAUTIC_DB_USER}
-  MARIADB_PASSWORD: ${MAUTIC_DB_PASSWORD}
+  MAUTIC_RUN_CRON_JOBS: "true"
 
 services:
   db:
@@ -35,16 +37,16 @@ services:
     volumes: 
       - mariadb-data:/var/lib/mysql
     healthcheck:
+      # O Alpine MariaDB pode não ter o healthcheck.sh, usamos o mysqladmin como fallback seguro
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      start_period: 10s
+      start_period: 20s
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
     networks:
       - custom_bridge
 
   nginx:
-    pull_policy: never
     image: mauticnginx
     build:
       context: .
@@ -74,13 +76,15 @@ services:
       DOCKER_MAUTIC_LOAD_TEST_DATA: ${DOCKER_MAUTIC_LOAD_TEST_DATA}
       DOCKER_MAUTIC_RUN_MIGRATIONS: "true"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "cgi-fcgi", "-bind", "-connect", "127.0.0.1:9000"]
-      start_period: 10s
-      interval: 5s
+      # Alterado para verificar o socket/porta do PHP-FPM sem depender de binários extras
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 9000 || exit 1"]
+      start_period: 30s
+      interval: 10s
       timeout: 5s
-      retries: 100
+      retries: 3
     networks:
       - custom_bridge
 
@@ -92,12 +96,9 @@ services:
     environment:
       <<: *base
       DOCKER_MAUTIC_ROLE: mautic_cron
-      DOCKER_MAUTIC_WORKERS_CONSUME_EMAIL: 2
-      DOCKER_MAUTIC_WORKERS_CONSUME_HIT: 2
-      DOCKER_MAUTIC_WORKERS_CONSUME_FAILED: 2
     depends_on:
-      - db
-      - mautic_web
+      mautic_web:
+        condition: service_healthy
     networks:
       - custom_bridge
 
@@ -113,8 +114,8 @@ services:
       DOCKER_MAUTIC_WORKERS_CONSUME_HIT: 2
       DOCKER_MAUTIC_WORKERS_CONSUME_FAILED: 2
     depends_on:
-      - db
-      - mautic_web
+      mautic_web:
+        condition: service_healthy
     networks:
       - custom_bridge
 
