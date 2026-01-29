@@ -31,14 +31,15 @@ services:
       MARIADB_DATABASE: ${MAUTIC_DB_DATABASE}
       MARIADB_USER: ${MAUTIC_DB_USER}
       MARIADB_PASSWORD: ${MAUTIC_DB_PASSWORD}
+      MARIADB_AUTO_UPGRADE: 1
     volumes: 
       - mariadb-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u${MAUTIC_DB_USER}", "-p${MAUTIC_DB_PASSWORD}"]
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       start_period: 10s
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 3
     networks:
       - custom_bridge
 
@@ -66,10 +67,7 @@ services:
     image: mautic/mautic:6-fpm
     container_name: mautic-web
     restart: unless-stopped
-    links:
-      - db:mysql
     volumes: *mautic-volumes
-
     environment:
       <<: *base
       DOCKER_MAUTIC_ROLE: mautic_web
@@ -91,8 +89,6 @@ services:
     image: mautic/mautic:6-fpm
     container_name: mautic-cron
     restart: unless-stopped
-    links:
-      - db:mysql
     volumes: *mautic-volumes
     environment:
       <<: *base
@@ -112,8 +108,6 @@ services:
     image: mautic/mautic:6-fpm
     container_name: mautic-worker
     restart: unless-stopped
-    links:
-      - db:mysql
     volumes: *mautic-volumes
     environment:
       <<: *base
